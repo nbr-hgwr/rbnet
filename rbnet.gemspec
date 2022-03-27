@@ -6,7 +6,6 @@ Gem::Specification.new do |spec|
   spec.name          = "rbnet"
   spec.version       = Rbnet::VERSION
   spec.authors       = ["nbr-hgwr"]
-  spec.email         = ["mp7.fal@gmail.com"]
 
   spec.summary       = "TODO: Write a short summary, because RubyGems requires one."
   spec.description   = "TODO: Write a longer description or delete this line."
