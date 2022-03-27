@@ -4,8 +4,9 @@ require 'socket'
 
 module Rbnet
   class Bridge
-    def initialize(interfaces_name)
+    def initialize(interfaces_name, options)
       @interfaces_name = interfaces_name
+      @options = options
     end
 
     def start
@@ -50,7 +51,7 @@ module Rbnet
             if sockets.key?(sock.object_id.to_s)
               send_sock = sock.object_id.to_s === soc_ids[0] ? sockets[soc_ids[1]] : sockets[soc_ids[0]]
               send_sock.send(frame, 0)
-              Rbnet::Executor.new(frame, packet_count)
+              Rbnet::Executor.new(frame, packet_count, @options['print'])
               packet_count += 1
             end
           end

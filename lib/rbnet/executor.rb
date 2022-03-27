@@ -2,7 +2,7 @@
 
 module Rbnet
   class Executor
-    def initialize(frame, count)
+    def initialize(frame, count, print)
       @frame = frame
       @count = count
 
@@ -13,7 +13,7 @@ module Rbnet
     def exec
       ether_header = Rbnet::EthernetAnalyzer.new(@frame)
       @packet_info.set_ether(ether_header)
-      print_ethernet(ether_header)
+      print_ethernet(ether_header) if @print
     end
 
     def print_ethernet(ether_header)
