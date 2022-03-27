@@ -1,3 +1,5 @@
 #!/usr/bin/env ruby
 
 require "rbnet"
+
+Rbnet::CLI.start(ARGV)

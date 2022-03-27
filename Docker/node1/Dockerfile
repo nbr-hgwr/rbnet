@@ -12,6 +12,8 @@ RUN yum clean all
 RUN git clone https://github.com/sstephenson/rbenv.git /usr/local/rbenv
 RUN git clone https://github.com/sstephenson/ruby-build.git /usr/local/rbenv/plugins/ruby-build
 
+RUN git clone https://github.com/nbr-hgwr/rbshark.git
+
 # コマンドでrbenvが使えるように設定
 RUN echo 'export RBENV_ROOT="/usr/local/rbenv"' >> /etc/profile.d/rbenv.sh
 RUN echo 'export PATH="${RBENV_ROOT}/bin:${PATH}"' >> /etc/profile.d/rbenv.sh
