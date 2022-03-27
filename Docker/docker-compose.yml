@@ -1,0 +1,30 @@
+version: '2'
+services:
+  node1:
+    build: ./node1
+    volumes:
+      - ../:/rbshark
+    tty: true
+    environment:
+      TZ: Asia/Tokyo
+  node2:
+    build: ./node2
+    volumes:
+      - ../:/rbshark
+    tty: true
+    environment:
+      TZ: Asia/Tokyo
+  node3:
+    build: ./node2
+    volumes:
+      - ../:/rbshark
+    tty: true
+    environment:
+      TZ: Asia/Tokyo
+networks:
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 2001:db8:1::/64
+          gateway: 2001:db8:1::1
