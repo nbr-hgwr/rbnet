@@ -52,7 +52,6 @@ module Rbnet
             Rbnet::Executor.new(frame, packet_count, @options['print'])
             packet_count += 1
           end
-          break if packet_count >= 6
         end
       rescue Interrupt
         rewire_kernel_ip_forward(1)
