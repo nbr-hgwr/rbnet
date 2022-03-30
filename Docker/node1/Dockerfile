@@ -1,7 +1,7 @@
 FROM centos:7
 
 # rubyとrailsのバージョンを指定
-ENV ruby_ver="2.7.3"
+ENV ruby_ver="3.1.1"
 
 # 必要なパッケージをインストール
 RUN yum -y update

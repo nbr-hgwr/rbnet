@@ -1,0 +1,69 @@
+version: '2'
+services:
+  rbnet_node1:
+    build: ../node1
+    volumes:
+      - ../../:/rbnet
+    tty: true
+    privileged: true
+    environment:
+      TZ: Asia/Tokyo
+    networks:
+      - net_a
+      - net_b
+      - net_c
+  rbnet_node2:
+    build: ../node2
+    volumes:
+      - ../../:/rbnet
+    tty: true
+    environment:
+      TZ: Asia/Tokyo
+    networks:
+      - net_a
+  rbnet_node3:
+    build: ../node3
+    volumes:
+      - ../../:/rbnet
+    tty: true
+    environment:
+      TZ: Asia/Tokyo
+    networks:
+      - net_b
+  rbnet_node4:
+    build: ../node4
+    volumes:
+      - ../../:/rbnet
+    tty: true
+    environment:
+      TZ: Asia/Tokyo
+    networks:
+      - net_c
+networks:
+  net_a:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.10.0/24
+        - subnet: 2001:db8:1::/64
+          gateway: 2001:db8:1::1
+  net_b:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.20.0/24
+        - subnet: 2001:db8:2::/64
+          gateway: 2001:db8:2::1
+  net_c:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.30.0/24
+        - subnet: 2001:db8:3::/64
+          gateway: 2001:db8:3::1

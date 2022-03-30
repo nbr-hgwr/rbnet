@@ -5,6 +5,7 @@ module Rbnet
     def initialize(frame, count, print)
       @frame = frame
       @count = count
+      @print = print
 
       @packet_info = Rbnet::PacketInfo.new(count)
       exec()
