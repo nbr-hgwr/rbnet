@@ -12,6 +12,7 @@ module Rbnet
     end
 
     def exec
+      Rbshark::Executor.new()
       ether_header = Rbnet::EthernetAnalyzer.new(@frame)
       @packet_info.set_ether(ether_header)
       print_ethernet(ether_header) if @print

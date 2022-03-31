@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'socket'
+require 'rbshark'
 
 module Rbnet
   class Bridge
@@ -45,11 +46,22 @@ module Rbnet
         rewire_kernel_ip_forward(0)
         while true
           recv_sock = IO::select(sockets.values)
+
+          if @options['print']
+            timestamp = Time.now
+            first_timestamp = timestamp if packet_count == 1
+            time_since = (timestamp - first_timestamp).to_s.split('.')
+          end
+
           recv_sock[0].each do |sock|
             frame = sock.recv(1024*8)
+
+            # 出力用のpacketデータを生成
+            packet_info = Rbshark::PacketInfo.new(packet_count, time_since) if @options['print']
+            Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
+
             send_sock = sock.object_id.to_s === sock_ids[0] ? sockets[sock_ids[1]] : sockets[sock_ids[0]]
             send_sock.send(frame, 0)
-            Rbnet::Executor.new(frame, packet_count, @options['print'])
             packet_count += 1
           end
         end

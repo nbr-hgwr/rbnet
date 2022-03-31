@@ -1,3 +1,10 @@
+GIT
+  remote: https://github.com/nbr-hgwr/rbshark.git
+  revision: d66a14b2641ee5a08ed4f2d863b736c6951a8ddc
+  branch: master
+  specs:
+    rbshark (0.1.0)
+
 PATH
   remote: .
   specs:
@@ -56,6 +63,7 @@ DEPENDENCIES
   pry
   rake (~> 13.0)
   rbnet!
+  rbshark!
   rspec
   rubocop
   thor

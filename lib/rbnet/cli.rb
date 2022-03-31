@@ -7,6 +7,7 @@ module Rbnet
   class CLI < Thor
     class_option :interfaces, type: :string, aliases: '-i', desc: 'specify interfaces. ex) -i "eth0 eth1"'
     class_option :print, type: :boolean, aliases: '-p', default: false, desc: 'use print packet'
+    class_option :view, type: :boolean, aliases: '-V', default: false, desc: 'view detailed all packets'
 
     def self.exit_on_failure?
       true
