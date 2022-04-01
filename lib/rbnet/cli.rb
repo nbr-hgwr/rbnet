@@ -22,5 +22,15 @@ module Rbnet
       interfaces = @options['interfaces'].split(' ')
       Rbnet::Bridge.new(interfaces, @options).start
     end
+
+    desc 'router <option>', 'run as a router'
+    def router
+      unless @options.key?('interfaces')
+        warn 'Error: interfaces was not specified.'
+        exit(1)
+      end
+      interfaces = @options['interfaces'].split(' ')
+      Rbnet::Router.new(interfaces, @options).start
+    end
   end
 end
