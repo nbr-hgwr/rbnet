@@ -47,6 +47,7 @@ module Rbnet
         while true
           recv_sock = IO::select(sockets.values)
 
+          # Rbshark用データ
           if @options['print']
             timestamp = Time.now
             first_timestamp = timestamp if packet_count == 1
@@ -68,6 +69,14 @@ module Rbnet
       rescue Interrupt
         rewire_kernel_ip_forward(1)
       end
+    end
+
+    def send_icmp_time_exceeded()
+      icmp_time_exceeded = Rbnet::ICMP_TIME_EXCEEDED()
+    end
+
+    def generate_checksum()
+
     end
   end
 end
