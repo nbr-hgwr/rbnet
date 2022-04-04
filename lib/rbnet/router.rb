@@ -11,6 +11,7 @@ module Rbnet
     end
 
     def start
+      $arp_table = Rbnet::ARPTable.new()
       interfaces = []
       for i in 0..@interfaces_name.size-1
         sock = Socket.open(Socket::AF_PACKET, Socket::SOCK_RAW, Rbnet::ETH_P_ALL)
@@ -53,10 +54,10 @@ module Rbnet
         rewire_kernel_ip_forward(0)
         while true
           recv_sock = IO::select(interfaces.map(&:sock))
+          timestamp = Time.now
 
           # Rbshark用データ
           if @options['print']
-            timestamp = Time.now
             first_timestamp = timestamp if packet_count == 1
             time_since = (timestamp - first_timestamp).to_s.split('.')
           end
@@ -67,7 +68,7 @@ module Rbnet
 
             # To Do: Ethernetヘッダよりframeが大きいチェック
 
-            Rbnet::Executor.new(frame, recv_interface).exec_ether
+            Rbnet::Executor.new(frame, timestamp, recv_interface).exec_ether
 
             if @options['print']
               # 出力用のpacketデータを生成
@@ -75,8 +76,6 @@ module Rbnet
               Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
             end
 
-            send_sock = sock.object_id.to_s === sock_ids[0] ? sockets[sock_ids[1]] : sockets[sock_ids[0]]
-            send_sock.send(frame, 0)
             packet_count += 1
           end
         end
