@@ -18,11 +18,22 @@ module Rbnet
       end
 
       sockets.each_with_index do |soc, i|
-        if_num = Rbnet::Interface.new.get_interface(soc[1], @interfaces_name[i])
+        if_num = get_interface(soc[1], @interfaces_name[i])
         soc[1].bind(sockaddr_ll(if_num))
       end
 
       bridge(sockets)
+    end
+
+    def get_interface(socket, interface)
+      # キャプチャを行うネットワークデバイスを取得して返す
+      ifreq = []
+      ifreq.push(interface)
+      ifreq = ifreq.dup.pack('a' + Rbnet::IFREQ_SIZE.to_s)
+      socket.ioctl(Rbnet::SIOCGIFINDEX, ifreq)
+      if_num = ifreq[Socket::IFNAMSIZ, Rbnet::IFINDEX_SIZE]
+
+      if_num
     end
 
     def sockaddr_ll(ifnum)

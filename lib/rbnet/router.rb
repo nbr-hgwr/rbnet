@@ -4,25 +4,32 @@ require 'socket'
 require 'rbshark'
 
 module Rbnet
-  class Bridge
+  class Router
     def initialize(interfaces_name, options)
       @interfaces_name = interfaces_name
       @options = options
     end
 
     def start
-      sockets = {}
-      for i in 1..@interfaces_name.size
-        obj = Socket.open(Socket::AF_PACKET, Socket::SOCK_RAW, Rbnet::ETH_P_ALL)
-        sockets[obj.object_id.to_s] = obj
+      interfaces = []
+      for i in 0..@interfaces_name.size-1
+        sock = Socket.open(Socket::AF_PACKET, Socket::SOCK_RAW, Rbnet::ETH_P_ALL)
+        if_num = get_interface(sock, @interfaces_name[i])
+        interfaces.push(Rbnet::Interface.new(sock,@interfaces_name[i]))
+        sock.bind(sockaddr_ll(if_num))
       end
+      router(interfaces)
+    end
 
-      sockets.each_with_index do |soc, i|
-        if_num = Rbnet::Interface.new.get_interface(soc[1], @interfaces_name[i])
-        soc[1].bind(sockaddr_ll(if_num))
-      end
+    def get_interface(socket, interface)
+      # キャプチャを行うネットワークデバイスを取得して返す
+      ifreq = []
+      ifreq.push(interface)
+      ifreq = ifreq.dup.pack('a' + Rbnet::IFREQ_SIZE.to_s)
+      socket.ioctl(Rbnet::SIOCGIFINDEX, ifreq)
+      if_num = ifreq[Socket::IFNAMSIZ, Rbnet::IFINDEX_SIZE]
 
-      router(sockets)
+      if_num
     end
 
     def sockaddr_ll(ifnum)
@@ -38,14 +45,14 @@ module Rbnet
       end
     end
 
-    def router(sockets)
-      sock_ids = sockets.keys
+    def router(interfaces)
+      #sock_ids = sockets.keys
       begin
         puts 'Router running...'
         packet_count = 1
         rewire_kernel_ip_forward(0)
         while true
-          recv_sock = IO::select(sockets.values)
+          recv_sock = IO::select(interfaces.map(&:sock))
 
           # Rbshark用データ
           if @options['print']
@@ -55,11 +62,18 @@ module Rbnet
           end
 
           recv_sock[0].each do |sock|
+            recv_interface = interfaces.select{|a| a.sock == sock}[0]
             frame = sock.recv(1024*8)
 
-            # 出力用のpacketデータを生成
-            packet_info = Rbshark::PacketInfo.new(packet_count, time_since) if @options['print']
-            Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
+            # To Do: Ethernetヘッダよりframeが大きいチェック
+
+            Rbnet::Executor.new(frame, recv_interface).exec_ether
+
+            if @options['print']
+              # 出力用のpacketデータを生成
+              packet_info = Rbshark::PacketInfo.new(packet_count, time_since)
+              Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
+            end
 
             send_sock = sock.object_id.to_s === sock_ids[0] ? sockets[sock_ids[1]] : sockets[sock_ids[0]]
             send_sock.send(frame, 0)

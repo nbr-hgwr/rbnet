@@ -9,7 +9,7 @@ module Rbnet
 
   class ICMPTimeExceeded
     attr_reader :packet
-    def initialize(ether_saddr=nil, ether_daddr=nil, ip_saddr=nil, ip_saddr=nil)
+    def initialize(ether_saddr=nil, ether_daddr=nil, ip_saddr=nil, ip_daddr=nil)
       @packet = {
         ether_saddr: {
           value: ether_saddr,
