@@ -30,7 +30,8 @@ module Rbnet
           ip6_addr = addr.ip_address
         when 17
           # MACアドレス
-          @hw_addr = addr.to_s[-6..-1].unpack('H*')[0]
+          @hw_addr = Rbnet::MacAddr.new addr.to_s[-6..-1][0..6].split('').map { |c| c.ord }
+          #addr.to_s[-6..-1].unpack('H*')[0]
         end
       end
     end

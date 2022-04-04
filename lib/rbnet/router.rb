@@ -18,7 +18,6 @@ module Rbnet
         interfaces.push(Rbnet::Interface.new(sock,@interfaces_name[i]))
         sock.bind(sockaddr_ll(if_num))
       end
-      require 'pry';binding.pry
       router(interfaces)
     end
 
@@ -63,7 +62,12 @@ module Rbnet
           end
 
           recv_sock[0].each do |sock|
+            recv_interface = interfaces.select{|a| a.sock == sock}[0]
             frame = sock.recv(1024*8)
+
+            # To Do: Ethernetヘッダよりframeが大きいチェック
+
+            Rbnet::Executor.new(frame, recv_interface).exec_ether
 
             if @options['print']
               # 出力用のpacketデータを生成
