@@ -8,9 +8,10 @@ module Rbnet
       @entry = {}
     end
 
-    def push_mac_ip_to_entry(ip_addr, hw_addr, ts)
+    def push_mac_ip_to_entry(ip_addr, hw_addr, interface, ts)
       @entry[ip_addr.to_sym] = {
         hw_addr: ip_addr,
+        interface: interface,
         ts:      ts
       }
     end

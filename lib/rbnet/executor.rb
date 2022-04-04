@@ -28,33 +28,34 @@ module Rbnet
         if $arp_table.key?(arp_header.ar_sip.to_s.to_sym)
           $arp_table.update_timestamp(ts)
         else
-          $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, ts)
+          $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, recv_interface, ts)
         end
 
-        case arp_header.ar_op
-        when 1
-          # ARP REQUEST
-        when 2
-          # ARP REPLY
-        else
-          return
+        # ARP REQUESTの場合、自身のMACアドレスとIPアドレスをパケットにセットして返信
+        if arp_header.ar_op == 1
+          # To Do
         end
       when 'IP'
+         # IPパケットの解析
         ip_header = Rbshark::IPV4Analyzer.new(@frame, ether_header.return_byte)
-        @packet_info.set_ip(ip_header)
 
-        if @print
-          @printer.print_ip(ip_header) if @view
-        end
+        # IPヘッダのチェックサムをValidation
+
+        # IPヘッダのTTLを1減らす
+        # 0になった場合ICMP Time Exceededパケットを送り返す
+
+        # IPヘッダのチェックサムを再計算
+
+        # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
+        # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
+        # ある場合: パケット送信処理
+
+        # MACアドレスの書き換え
+
+        # 送出側のインターフェースからパケットを送出
+
+
         exec_ip(ip_header)
-      when 'IPv6'
-        ip6_header = IPV6Analyzer.new(@frame, ether_header.return_byte)
-        @packet_info.set_ipv6(ip6_header)
-
-        if @print
-          @printer.print_ip6(ip6_header) if @view
-        end
-        exec_ip6(ip6_header)
       end
     end
   end
