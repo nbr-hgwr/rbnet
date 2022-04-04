@@ -2,6 +2,7 @@
 
 require_relative "rbnet/version"
 require_relative "rbnet/bridge"
+require_relative "rbnet/router"
 require_relative "rbnet/cli"
 require_relative "rbnet/resource/interface"
 require_relative "rbnet/resource/type"
