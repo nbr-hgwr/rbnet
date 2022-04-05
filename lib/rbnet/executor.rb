@@ -4,10 +4,11 @@ require 'rbshark'
 
 module Rbnet
   class Executor
-    def initialize(frame, ts, recv_interface)
+    def initialize(frame, ts, recv_interface, interfaces)
       @frame = frame
       @ts = ts
       @recv_interface = recv_interface
+      @interfaces = interfaces
     end
 
     def exec_ether
@@ -25,10 +26,10 @@ module Rbnet
         return unless arp_header.ar_tip.to_s == @recv_interface.in_addr[:ip_addr]
 
         # arp tableに登録があるかをチェック
-        if $arp_table.key?(arp_header.ar_sip.to_s.to_sym)
-          $arp_table.update_timestamp(ts)
+        if $arp_table.entry.key?(arp_header.ar_sip.to_s.to_sym)
+          $arp_table.update_timestamp(arp_header.ar_sip.to_s, @ts)
         else
-          $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, recv_interface, ts)
+          $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, @recv_interface, @ts)
         end
 
         # ARP REQUESTの場合、自身のMACアドレスとIPアドレスをパケットにセットして返信
@@ -40,23 +41,64 @@ module Rbnet
         ip_header = Rbshark::IPV4Analyzer.new(@frame, ether_header.return_byte)
 
         # IPヘッダのチェックサムをValidation
+        retrun if ip_header.vali_sum == false
 
         # IPヘッダのTTLを1減らす
         # 0になった場合ICMP Time Exceededパケットを送り返す
+        ttl = ip_header.ip_ttl - 1
+        send_icmp_time_exceeded() if ttl == 0
 
         # IPヘッダのチェックサムを再計算
+        ttl = calculate_cksum(ip_header, ttl)
 
         # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
-        # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
         # ある場合: パケット送信処理
+        # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
+        if $arp_table.entry.key?(ip_header.ip_daddr.to_s.to_sym)
+          # ある場合
+          hw_dhost  = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:hw_addr].to_s
+          interface = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:sock]
+        else
+          # 無い場合
+          # arp request発出
+        end
 
         # MACアドレスの書き換え
+        hw_shost = 
 
         # 送出側のインターフェースからパケットを送出
 
-
-        exec_ip(ip_header)
       end
+    end
+
+    def send_icmp_time_exceeded()
+      # To Do
+      icmp_time_exceeded = Rbnet::ICMP_TIME_EXCEEDED()
+    end
+
+    def calculate_cksum(ip_header, ttl)
+      # IPヘッダ部分をframeから抽出
+      ip_frame = @frame[ip_header.start_byte..ip_header.return_byte]
+      # ttl書き換え
+      ip_frame[8] = ttl.chr
+
+      ip_header_byte = ip_header.return_byte - ip_header.start_byte
+      byte = 0
+      sum  = 0
+
+      # 16bitずつ足し合わせる
+      for i in 1..ip_header_byte/2
+        sum += (ip_frame[byte].ord << 8) + @frame[byte + 1].ord
+        byte += 2
+      end
+      sum = sum.to_s(16)
+      sum = sum[0].to_i(16) + sum[1..4].to_i(16)
+
+      # 補数を取る
+      complement = sprintf("%#x", ~sum)
+      # .chrが8bitまでしか対応していないため2桁ずつ分ける (cksumは16bit)
+      ttl = complement.slice(-4,2).to_i(16).chr + complement.slice(-2,2).to_i(16).chr
+      ttl
     end
   end
 end

@@ -84,10 +84,6 @@ module Rbnet
       end
     end
 
-    def send_icmp_time_exceeded()
-      icmp_time_exceeded = Rbnet::ICMP_TIME_EXCEEDED()
-    end
-
     def generate_checksum()
 
     end
