@@ -84,7 +84,7 @@ module Rbnet
       return unless send_interface.nil?
 
       hw_shost = send_interface.hw_addr
-      ether_frame = remake_ether_header(ether_header, hw_dhost, hw_shost)
+      ether_frame = remake_ether_header(ether_header, hw_shost, hw_dhost)
 
       # 元パケットのethernetヘッダとIPヘッダを書き換える
       @frame[ether_header.start_byte..ether_header.return_byte] = ether_frame
@@ -127,6 +127,17 @@ module Rbnet
       ip_frame
     end
 
-    def remake_ether_header(ether_header, hw_dhost, hw_shost); end
+    def remake_ether_header(ether_header, hw_shost, hw_dhost)
+      ether_frame = @frame[ether_header.start_byte..ether_header.return_byte]
+
+      hw_shost.to_s.split(':').each_with_index do |oct, index|
+        ether_frame[i]  = oct.to_i(16).chr
+      end
+
+      hw_dhost.to_s.split(':').each_with_index do |oct, index|
+        ether_frame[i+6]  = oct.to_i(16).chr
+      end
+      ether_frame
+    end
   end
 end
