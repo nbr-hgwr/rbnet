@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/nbr-hgwr/rbshark.git
-  revision: ca4838294d6934208ad5d5a11599e1dcde56782a
+  revision: 10e47971dd99099b7ed3139a7605655d1bca5750
   branch: master
   specs:
     rbshark (0.1.0)
