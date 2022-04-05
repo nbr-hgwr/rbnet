@@ -81,9 +81,15 @@ module Rbnet
         if send_interface.nil?
           hw_shost = send_interface.hw_addr
           ether_frame = remake_ether_header(ether_header, hw_dhost, hw_shost)
-        end
 
-        # 送出側のインターフェースからパケットを送出
+          # 元パケットのethernetヘッダとIPヘッダを書き換える
+          @frame[ether_header.start_byte..ether_header.return_byte] = ether_frame
+          @frame[ip_header.start_byte..ip_header.return_byte] = ip_frame
+
+          # 送出側のインターフェースからパケットを送出
+          send_interface.sock.send(@frame, 0)
+
+        end
 
       end
     end
