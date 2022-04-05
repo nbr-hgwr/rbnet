@@ -12,13 +12,13 @@ module Rbnet
 
     def start
       sockets = {}
-      for i in 1..@interfaces_name.size
+      (1..@interfaces_name.size).each do |_index|
         obj = Socket.open(Socket::AF_PACKET, Socket::SOCK_RAW, Rbnet::ETH_P_ALL)
         sockets[obj.object_id.to_s] = obj
       end
 
-      sockets.each_with_index do |soc, i|
-        if_num = get_interface(soc[1], @interfaces_name[i])
+      sockets.each_with_index do |soc, index|
+        if_num = get_interface(soc[1], @interfaces_name[index])
         soc[1].bind(sockaddr_ll(if_num))
       end
 
@@ -29,11 +29,11 @@ module Rbnet
       # キャプチャを行うネットワークデバイスを取得して返す
       ifreq = []
       ifreq.push(interface)
+      # rubocop:disable Style/StringConcatenation
       ifreq = ifreq.dup.pack('a' + Rbnet::IFREQ_SIZE.to_s)
+      # rubocop:enable Style/StringConcatenation
       socket.ioctl(Rbnet::SIOCGIFINDEX, ifreq)
-      if_num = ifreq[Socket::IFNAMSIZ, Rbnet::IFINDEX_SIZE]
-
-      if_num
+      ifreq[Socket::IFNAMSIZ, Rbnet::IFINDEX_SIZE]
     end
 
     def sockaddr_ll(ifnum)
@@ -56,7 +56,7 @@ module Rbnet
         packet_count = 1
         rewire_kernel_ip_forward(0)
         while true
-          recv_sock = IO::select(sockets.values)
+          recv_sock = IO.select(sockets.values)
 
           if @options['print']
             timestamp = Time.now
@@ -65,11 +65,13 @@ module Rbnet
           end
 
           recv_sock[0].each do |sock|
-            frame = sock.recv(1024*8)
+            frame = sock.recv(1024 * 8)
 
             # 出力用のpacketデータを生成
-            packet_info = Rbshark::PacketInfo.new(packet_count, time_since) if @options['print']
-            Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
+            if @options['print']
+              packet_info = Rbshark::PacketInfo.new(packet_count, time_since)
+              Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
+            end
 
             send_sock = sock.object_id.to_s === sock_ids[0] ? sockets[sock_ids[1]] : sockets[sock_ids[0]]
             send_sock.send(frame, 0)

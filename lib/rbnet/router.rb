@@ -11,12 +11,12 @@ module Rbnet
     end
 
     def start
-      $arp_table = Rbnet::ARPTable.new()
+      $arp_table = Rbnet::ARPTable.new
       interfaces = []
-      for i in 0..@interfaces_name.size-1
+      (0..@interfaces_name.size - 1).each do |index|
         sock = Socket.open(Socket::AF_PACKET, Socket::SOCK_RAW, Rbnet::ETH_P_ALL)
-        if_num = get_interface(sock, @interfaces_name[i])
-        interfaces.push(Rbnet::Interface.new(sock,@interfaces_name[i]))
+        if_num = get_interface(sock, @interfaces_name[index])
+        interfaces.push(Rbnet::Interface.new(sock, @interfaces_name[index]))
         sock.bind(sockaddr_ll(if_num))
       end
       router(interfaces)
@@ -26,11 +26,11 @@ module Rbnet
       # キャプチャを行うネットワークデバイスを取得して返す
       ifreq = []
       ifreq.push(interface)
+      # rubocop:disable Style/StringConcatenation
       ifreq = ifreq.dup.pack('a' + Rbnet::IFREQ_SIZE.to_s)
+      # rubocop:enable Style/StringConcatenation
       socket.ioctl(Rbnet::SIOCGIFINDEX, ifreq)
-      if_num = ifreq[Socket::IFNAMSIZ, Rbnet::IFINDEX_SIZE]
-
-      if_num
+      ifreq[Socket::IFNAMSIZ, Rbnet::IFINDEX_SIZE]
     end
 
     def sockaddr_ll(ifnum)
@@ -47,45 +47,42 @@ module Rbnet
     end
 
     def router(interfaces)
-      #sock_ids = sockets.keys
-      begin
-        puts 'Router running...'
-        packet_count = 1
-        rewire_kernel_ip_forward(0)
-        while true
-          recv_sock = IO::select(interfaces.map(&:sock))
-          timestamp = Time.now
+      # sock_ids = sockets.keys
 
-          # Rbshark用データ
-          if @options['print']
-            first_timestamp = timestamp if packet_count == 1
-            time_since = (timestamp - first_timestamp).to_s.split('.')
-          end
+      puts 'Router running...'
+      packet_count = 1
+      rewire_kernel_ip_forward(0)
+      while true
+        recv_sock = IO.select(interfaces.map(&:sock))
+        timestamp = Time.now
 
-          recv_sock[0].each do |sock|
-            recv_interface = interfaces.select{|a| a.sock == sock}[0]
-            frame = sock.recv(1024*8)
-
-            # To Do: Ethernetヘッダよりframeが大きいチェック
-
-            Rbnet::Executor.new(frame, timestamp, recv_interface, interfaces).exec_ether
-
-            if @options['print']
-              # 出力用のpacketデータを生成
-              packet_info = Rbshark::PacketInfo.new(packet_count, time_since)
-              Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
-            end
-
-            packet_count += 1
-          end
+        # Rbshark用データ
+        if @options['print']
+          first_timestamp = timestamp if packet_count == 1
+          time_since = (timestamp - first_timestamp).to_s.split('.')
         end
-      rescue Interrupt
-        rewire_kernel_ip_forward(1)
+
+        recv_sock[0].each do |sock|
+          recv_interface = interfaces.select { |a| a.sock == sock }[0]
+          frame = sock.recv(1024 * 8)
+
+          # To Do: Ethernetヘッダよりframeが大きいチェック
+
+          Rbnet::Executor.new(frame, timestamp, recv_interface, interfaces).exec_ether
+
+          if @options['print']
+            # 出力用のpacketデータを生成
+            packet_info = Rbshark::PacketInfo.new(packet_count, time_since)
+            Rbshark::Executor.new(frame, packet_info, @options['print'], @options['view']).exec_ether
+          end
+
+          packet_count += 1
+        end
       end
+    rescue Interrupt
+      rewire_kernel_ip_forward(1)
     end
 
-    def generate_checksum()
-
-    end
+    def generate_checksum; end
   end
 end
