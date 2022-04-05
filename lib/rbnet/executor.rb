@@ -131,11 +131,11 @@ module Rbnet
       ether_frame = @frame[ether_header.start_byte..ether_header.return_byte]
 
       hw_shost.to_s.split(':').each_with_index do |oct, index|
-        ether_frame[i]  = oct.to_i(16).chr
+        ether_frame[index]  = oct.to_i(16).chr
       end
 
       hw_dhost.to_s.split(':').each_with_index do |oct, index|
-        ether_frame[i+6]  = oct.to_i(16).chr
+        ether_frame[index+6]  = oct.to_i(16).chr
       end
       ether_frame
     end
