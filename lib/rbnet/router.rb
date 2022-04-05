@@ -68,7 +68,7 @@ module Rbnet
 
             # To Do: Ethernetヘッダよりframeが大きいチェック
 
-            Rbnet::Executor.new(frame, timestamp, recv_interface).exec_ether
+            Rbnet::Executor.new(frame, timestamp, recv_interface, interfaces).exec_ether
 
             if @options['print']
               # 出力用のpacketデータを生成

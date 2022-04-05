@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'ipaddress'
+require 'ipaddr'
+
 module Rbnet
   # ネットワークインターフェースの情報を持つ構造体
   class Interface
@@ -11,10 +14,12 @@ module Rbnet
       @sock = sock
       @in_addr = {
         ip_addr: nil,
-        netmask: nil
+        netmask: nil,
+        subnet:  nil
       }
       get_addr_used_if(if_name)
       get_netmask_used_if(if_name)
+      @in_addr[:subnet] = IPAddr.new("#{@in_addr[:ip_addr]}/#{@in_addr[:netmask]}")
     end
 
     def get_addr_used_if(if_name)

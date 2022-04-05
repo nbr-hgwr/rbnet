@@ -28,8 +28,10 @@ module Rbnet
         # arp tableに登録があるかをチェック
         if $arp_table.entry.key?(arp_header.ar_sip.to_s.to_sym)
           $arp_table.update_timestamp(arp_header.ar_sip.to_s, @ts)
+          puts "[Update TimeStamp] #{arp_header.ar_sip.to_s} -> #{arp_header.ar_sha.to_s} #{@ts}"
         else
           $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, @recv_interface, @ts)
+          puts "[Push ARP Entry]   #{arp_header.ar_sip.to_s} -> #{arp_header.ar_sha.to_s} #{@ts}"
         end
 
         # ARP REQUESTの場合、自身のMACアドレスとIPアドレスをパケットにセットして返信
@@ -49,22 +51,37 @@ module Rbnet
         send_icmp_time_exceeded() if ttl == 0
 
         # IPヘッダのチェックサムを再計算
-        ttl = calculate_cksum(ip_header, ttl)
+        # ttlとcksumを更新したIPヘッダのframeを取得
+        ip_frame = calculate_cksum(ip_header, ttl)
 
         # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
         # ある場合: パケット送信処理
         # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
-        if $arp_table.entry.key?(ip_header.ip_daddr.to_s.to_sym)
+        if $arp_table.entry.key?(ip_header.ip_dst.to_s.to_sym)
           # ある場合
           hw_dhost  = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:hw_addr].to_s
-          interface = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:sock]
+          sock = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:sock]
         else
           # 無い場合
           # arp request発出
+          retrun
+        end
+
+        # 送出するインターフェースを判別する
+        send_interface = nil
+        @interfaces.each do |interface|
+          if interface.in_addr[:subnet].include?(ip_header.ip_dst.to_s)
+            send_interface = interface
+          else
+            # To Do
+          end
         end
 
         # MACアドレスの書き換え
-        hw_shost = 
+        if send_interface.nil?
+          hw_shost = send_interface.hw_addr
+          ether_frame = remake_ether_header(ether_header, hw_dhost, hw_shost)
+        end
 
         # 送出側のインターフェースからパケットを送出
 
@@ -85,6 +102,7 @@ module Rbnet
       ip_header_byte = ip_header.return_byte - ip_header.start_byte
       byte = 0
       sum  = 0
+      ip_frame[10..11] = sum.chr + sum.chr
 
       # 16bitずつ足し合わせる
       for i in 1..ip_header_byte/2
@@ -97,8 +115,13 @@ module Rbnet
       # 補数を取る
       complement = sprintf("%#x", ~sum)
       # .chrが8bitまでしか対応していないため2桁ずつ分ける (cksumは16bit)
-      ttl = complement.slice(-4,2).to_i(16).chr + complement.slice(-2,2).to_i(16).chr
-      ttl
+      cksum = complement.slice(-4,2).to_i(16).chr + complement.slice(-2,2).to_i(16).chr
+      # cksumのフィールドを再計算したものに置き換える
+      ip_frame[10..11] = cksum
+      ip_frame
+    end
+
+    def remake_ether_header(ether_header, hw_dhost, hw_shost)
     end
   end
 end
