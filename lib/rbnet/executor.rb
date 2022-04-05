@@ -4,9 +4,9 @@ require 'rbshark'
 
 module Rbnet
   class Executor
-    def initialize(frame, ts, recv_interface, interfaces)
+    def initialize(frame, timestamp, recv_interface, interfaces)
       @frame = frame
-      @ts = ts
+      @timestamp = timestamp
       @recv_interface = recv_interface
       @interfaces = interfaces
     end
@@ -21,82 +21,82 @@ module Rbnet
       case ether_header.check_protocol_type
       when 'ARP'
         arp_header = Rbshark::ARPAnalyzer.new(@frame, ether_header.return_byte)
-
-        # target IPが受信したインターフェースのIPアドレスと一致するかをチェック
-        return unless arp_header.ar_tip.to_s == @recv_interface.in_addr[:ip_addr]
-
-        # arp tableに登録があるかをチェック
-        if $arp_table.entry.key?(arp_header.ar_sip.to_s.to_sym)
-          $arp_table.update_timestamp(arp_header.ar_sip.to_s, @ts)
-          puts "[Update TimeStamp] #{arp_header.ar_sip.to_s} -> #{arp_header.ar_sha.to_s} #{@ts}"
-        else
-          $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, @recv_interface, @ts)
-          puts "[Push ARP Entry]   #{arp_header.ar_sip.to_s} -> #{arp_header.ar_sha.to_s} #{@ts}"
-        end
-
-        # ARP REQUESTの場合、自身のMACアドレスとIPアドレスをパケットにセットして返信
-        if arp_header.ar_op == 1
-          # To Do
-        end
+        exec_arp(arp_header)
       when 'IP'
-         # IPパケットの解析
+        # IPパケットの解析
         ip_header = Rbshark::IPV4Analyzer.new(@frame, ether_header.return_byte)
-
-        # IPヘッダのチェックサムをValidation
-        retrun if ip_header.vali_sum == false
-
-        # IPヘッダのTTLを1減らす
-        # 0になった場合ICMP Time Exceededパケットを送り返す
-        ttl = ip_header.ip_ttl - 1
-        send_icmp_time_exceeded() if ttl == 0
-
-        # IPヘッダのチェックサムを再計算
-        # ttlとcksumを更新したIPヘッダのframeを取得
-        ip_frame = calculate_cksum(ip_header, ttl)
-
-        # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
-        # ある場合: パケット送信処理
-        # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
-        if $arp_table.entry.key?(ip_header.ip_dst.to_s.to_sym)
-          # ある場合
-          hw_dhost  = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:hw_addr].to_s
-          sock = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:sock]
-        else
-          # 無い場合
-          # arp request発出
-          retrun
-        end
-
-        # 送出するインターフェースを判別する
-        send_interface = nil
-        @interfaces.each do |interface|
-          if interface.in_addr[:subnet].include?(ip_header.ip_dst.to_s)
-            send_interface = interface
-          else
-            # To Do
-          end
-        end
-
-        # MACアドレスの書き換え
-        if send_interface.nil?
-          hw_shost = send_interface.hw_addr
-          ether_frame = remake_ether_header(ether_header, hw_dhost, hw_shost)
-
-          # 元パケットのethernetヘッダとIPヘッダを書き換える
-          @frame[ether_header.start_byte..ether_header.return_byte] = ether_frame
-          @frame[ip_header.start_byte..ip_header.return_byte] = ip_frame
-
-          # 送出側のインターフェースからパケットを送出
-          send_interface.sock.send(@frame, 0)
-
-        end
-
+        exec_ip(ip_header)
       end
     end
 
-    def send_icmp_time_exceeded()
+    def exec_arp(arp_header)
+      # target IPが受信したインターフェースのIPアドレスと一致するかをチェック
+      return unless arp_header.ar_tip.to_s == @recv_interface.in_addr[:ip_addr]
+
+      # arp tableに登録があるかをチェック
+      if $arp_table.entry.key?(arp_header.ar_sip.to_s.to_sym)
+        $arp_table.update_timestamp(arp_header.ar_sip.to_s, @timestamp)
+        puts "[Update TimeStamp] #{arp_header.ar_sip} -> #{arp_header.ar_sha} #{@timestamp}"
+      else
+        $arp_table.push_mac_ip_to_entry(arp_header.ar_sip.to_s, arp_header.ar_sha.to_s, @recv_interface, @timestamp)
+        puts "[Push ARP Entry]   #{arp_header.ar_sip} -> #{arp_header.ar_sha} #{@timestamp}"
+      end
+
+      # ARP REQUESTの場合、自身のMACアドレスとIPアドレスをパケットにセットして返信
+      if arp_header.ar_op == 1
+        # To Do
+      end
+    end
+
+    def exec_ip(ip_header)
+      # IPヘッダのチェックサムをValidation
+      retrun if ip_header.vali_sum == false
+
+      # IPヘッダのTTLを1減らす
+      # 0になった場合ICMP Time Exceededパケットを送り返す
+      ttl = ip_header.ip_ttl - 1
+      send_icmp_time_exceeded if ttl.zero?
+
+      # IPヘッダのチェックサムを再計算
+      # ttlとcksumを更新したIPヘッダのframeを取得
+      ip_frame = calculate_cksum(ip_header, ttl)
+
+      # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
+      # ある場合: パケット送信処理
+      # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
+      if $arp_table.entry.key?(ip_header.ip_dst.to_s.to_sym)
+        # ある場合
+        hw_dhost = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:hw_addr].to_s
+      else
+        # 無い場合
+        # arp request発出
+        return
+      end
+
+      # 送出するインターフェースを判別する
+      send_interface = nil
+      @interfaces.each do |interface|
+        # 宛先IPがインターフェースのsubnet内のIPアドレスか判定
+        send_interface = interface if interface.in_addr[:subnet].include?(ip_header.ip_dst.to_s)
+      end
+
+      # MACアドレスの書き換え
+      return unless send_interface.nil?
+
+      hw_shost = send_interface.hw_addr
+      ether_frame = remake_ether_header(ether_header, hw_dhost, hw_shost)
+
+      # 元パケットのethernetヘッダとIPヘッダを書き換える
+      @frame[ether_header.start_byte..ether_header.return_byte] = ether_frame
+      @frame[ip_header.start_byte..ip_header.return_byte] = ip_frame
+
+      # 送出側のインターフェースからパケットを送出
+      send_interface.sock.send(@frame, 0)
+    end
+
+    def send_icmp_time_exceeded
       # To Do
-      icmp_time_exceeded = Rbnet::ICMP_TIME_EXCEEDED()
+      # icmp_time_exceeded = Rbnet::ICMP_TIME_EXCEEDED()
     end
 
     def calculate_cksum(ip_header, ttl)
@@ -111,7 +111,7 @@ module Rbnet
       ip_frame[10..11] = sum.chr + sum.chr
 
       # 16bitずつ足し合わせる
-      for i in 1..ip_header_byte/2
+      [1..ip_header_byte / 2].each do |_index|
         sum += (ip_frame[byte].ord << 8) + @frame[byte + 1].ord
         byte += 2
       end
@@ -119,15 +119,14 @@ module Rbnet
       sum = sum[0].to_i(16) + sum[1..4].to_i(16)
 
       # 補数を取る
-      complement = sprintf("%#x", ~sum)
+      complement = format('%#x', ~sum)
       # .chrが8bitまでしか対応していないため2桁ずつ分ける (cksumは16bit)
-      cksum = complement.slice(-4,2).to_i(16).chr + complement.slice(-2,2).to_i(16).chr
+      cksum = complement.slice(-4, 2).to_i(16).chr + complement.slice(-2, 2).to_i(16).chr
       # cksumのフィールドを再計算したものに置き換える
       ip_frame[10..11] = cksum
       ip_frame
     end
 
-    def remake_ether_header(ether_header, hw_dhost, hw_shost)
-    end
+    def remake_ether_header(ether_header, hw_dhost, hw_shost); end
   end
 end

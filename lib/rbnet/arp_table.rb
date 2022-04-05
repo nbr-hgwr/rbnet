@@ -4,20 +4,21 @@ module Rbnet
   # ネットワークインターフェースの情報を持つ構造体
   class ARPTable
     attr_reader :entry
-    def initialize()
+
+    def initialize
       @entry = {}
     end
 
-    def push_mac_ip_to_entry(ip_addr, hw_addr, interface, ts)
+    def push_mac_ip_to_entry(ip_addr, hw_addr, interface, timestamp)
       @entry[ip_addr.to_sym] = {
-        hw_addr: hw_addr,
-        interface: interface,
-        ts:      ts
+        hw_addr:,
+        interface:,
+        timestamp:
       }
     end
 
-    def update_timestamp(ip_addr, ts)
-      @entry[ip_addr.to_sym][:ts] = ts
+    def update_timestamp(ip_addr, timestamp)
+      @entry[ip_addr.to_sym][:timestamp] = timestamp
     end
   end
 end
