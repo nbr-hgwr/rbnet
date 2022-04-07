@@ -25,7 +25,7 @@ module Rbnet
       when 'IP'
         # IPパケットの解析
         ip_header = Rbshark::IPV4Analyzer.new(@frame, ether_header.return_byte)
-        exec_ip(ip_header)
+        exec_ip(ip_header, ether_header)
       end
     end
 
@@ -48,7 +48,7 @@ module Rbnet
       end
     end
 
-    def exec_ip(ip_header)
+    def exec_ip(ip_header, ether_header)
       # IPヘッダのチェックサムをValidation
       retrun if ip_header.vali_sum == false
 
@@ -81,7 +81,7 @@ module Rbnet
       end
 
       # MACアドレスの書き換え
-      return unless send_interface.nil?
+      return if send_interface.nil?
 
       hw_shost = send_interface.hw_addr
       ether_frame = remake_ether_header(ether_header, hw_shost, hw_dhost)
@@ -127,14 +127,14 @@ module Rbnet
       ip_frame
     end
 
-    def remake_ether_header(ether_header, hw_shost, hw_dhost)
+    def remake_ether_header(ether_header, hw_dhost, hw_shost)
       ether_frame = @frame[ether_header.start_byte..ether_header.return_byte]
 
-      hw_shost.to_s.split(':').each_with_index do |oct, index|
+      hw_dhost.to_s.split(':').each_with_index do |oct, index|
         ether_frame[index]  = oct.to_i(16).chr
       end
 
-      hw_dhost.to_s.split(':').each_with_index do |oct, index|
+      hw_shost.to_s.split(':').each_with_index do |oct, index|
         ether_frame[index+6]  = oct.to_i(16).chr
       end
       ether_frame
