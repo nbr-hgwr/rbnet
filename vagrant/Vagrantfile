@@ -6,6 +6,10 @@ Vagrant.configure('2') do |config|
       virtualbox__intnet: 'net_a'
     node.vm.network :private_network, ip: '192.168.20.2', subnet: '24',
       virtualbox__intnet: 'net_b'
+    node.vm.network :private_network, ip: '192.168.30.2', subnet: '24',
+      virtualbox__intnet: 'net_c'
+    node.vm.network :private_network, ip: '192.168.40.2', subnet: '24',
+      virtualbox__intnet: 'net_d'
     # rbenvをインストール
     node.vm.synced_folder './../', '/vagrant'
     node.vm.provision "shell", path: "setup_rbenv.sh"
@@ -21,5 +25,17 @@ Vagrant.configure('2') do |config|
     node.vm.box = 'centos/7'
     node.vm.network :private_network, ip: '192.168.20.3', subnet: '24',
       virtualbox__intnet: 'net_b'
+  end
+
+  config.vm.define :node4 do |node|
+    node.vm.box = 'centos/7'
+    node.vm.network :private_network, ip: '192.168.30.3', subnet: '24',
+      virtualbox__intnet: 'net_c'
+  end
+
+  config.vm.define :node5 do |node|
+    node.vm.box = 'centos/7'
+    node.vm.network :private_network, ip: '192.168.40.3', subnet: '24',
+      virtualbox__intnet: 'net_d'
   end
 end
