@@ -11,6 +11,17 @@ vagrant ssh node1
   bundle install
   bundle exec exe/rbnet router -i "eth1 eth2"
 
+# node2
+sudo ip route delete default
+sudo ip route add default via 192.168.10.2 dev eth1
+
+# node3
+sudo ip route delete default
+sudo ip route add default via 192.168.20.2 dev eth1
+
+# node5
+sudo ip route delete default
+sudo ip route add default via 192.168.40.2 dev eth1
 ```
 
 ### Docker
@@ -25,13 +36,5 @@ docker exec -it docker_rbnet_node1_1 /bin/sh
   cd rbnet/
   bundle install
   bundle exec exe/rbnet bridge -i "eth0 eth1"
-
-# node2
-sudo ip route delete default
-sudo ip route add default via 192.168.10.2 dev eth1
-
-# node2
-sudo ip route delete default
-sudo ip route add default via 192.168.20.2 dev eth1
 
 ```
