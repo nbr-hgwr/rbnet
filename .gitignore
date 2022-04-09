@@ -1,0 +1,10 @@
+/.bundle/
+/.vendor/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+/vagrant/.vagrant/
