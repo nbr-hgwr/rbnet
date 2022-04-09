@@ -59,7 +59,7 @@ module Rbnet
 
       # IPヘッダのチェックサムを再計算
       # ttlとcksumを更新したIPヘッダのframeを取得
-      ip_frame = calculate_cksum(ip_header, ttl)
+      ip_header_tmp = calculate_cksum(ip_header, ttl)
 
       # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
       # ある場合: パケット送信処理
@@ -88,7 +88,7 @@ module Rbnet
 
       # 元パケットのethernetヘッダとIPヘッダを書き換える
       @frame[ether_header.start_byte..ether_header.return_byte] = ether_frame
-      @frame[ip_header.start_byte..ip_header.return_byte] = ip_frame
+      @frame[ip_header.start_byte..ip_header.return_byte] = ip_header_tmp
 
       # 送出側のインターフェースからパケットを送出
       send_interface.sock.send(@frame, 0)
@@ -101,18 +101,18 @@ module Rbnet
 
     def calculate_cksum(ip_header, ttl)
       # IPヘッダ部分をframeから抽出
-      ip_frame = @frame[ip_header.start_byte..ip_header.return_byte]
+      ip_header_tmp = @frame[ip_header.start_byte..ip_header.return_byte]
       # ttl書き換え
-      ip_frame[8] = ttl.chr
+      ip_header_tmp[8] = ttl.chr
 
       ip_header_byte = ip_header.return_byte - ip_header.start_byte
       byte = 0
       sum  = 0
-      ip_frame[10..11] = sum.chr + sum.chr
+      ip_header_tmp[10..11] = sum.chr + sum.chr
 
       # 16bitずつ足し合わせる
-      [1..ip_header_byte / 2].each do |_index|
-        sum += (ip_frame[byte].ord << 8) + @frame[byte + 1].ord
+      (1..ip_header_byte / 2).each do |_index|
+        sum  += (ip_header_tmp[byte].ord << 8) + ip_header_tmp[byte + 1].ord
         byte += 2
       end
       sum = sum.to_s(16)
@@ -123,18 +123,18 @@ module Rbnet
       # .chrが8bitまでしか対応していないため2桁ずつ分ける (cksumは16bit)
       cksum = complement.slice(-4, 2).to_i(16).chr + complement.slice(-2, 2).to_i(16).chr
       # cksumのフィールドを再計算したものに置き換える
-      ip_frame[10..11] = cksum
-      ip_frame
+      ip_header_tmp[10..11] = cksum
+      ip_header_tmp
     end
 
-    def remake_ether_header(ether_header, hw_dhost, hw_shost)
+    def remake_ether_header(ether_header, hw_shost, hw_dhost)
       ether_frame = @frame[ether_header.start_byte..ether_header.return_byte]
 
-      hw_dhost.to_s.split(':').each_with_index do |oct, index|
+      hw_shost.to_s.split(':').each_with_index do |oct, index|
         ether_frame[index]  = oct.to_i(16).chr
       end
 
-      hw_shost.to_s.split(':').each_with_index do |oct, index|
+      hw_dhost.to_s.split(':').each_with_index do |oct, index|
         ether_frame[index+6]  = oct.to_i(16).chr
       end
       ether_frame
