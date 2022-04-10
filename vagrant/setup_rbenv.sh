@@ -3,6 +3,8 @@
 RBENV_INSTALL_DEST_DIR=/usr/local/rbenv
 COMMON_BASH_SETTING_FILE=/etc/profile
 
+sudo yum update -y
+
 sudo yum -y install gcc openssl-devel readline-devel git tcpdump wireshark
 
 sudo git clone https://github.com/sstephenson/rbenv.git ${RBENV_INSTALL_DEST_DIR}

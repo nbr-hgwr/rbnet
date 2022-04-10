@@ -5,6 +5,12 @@
 ```
 vagrant up
 
+vagrant ssh node*
+  sudo yum update -y
+  exit
+
+vagrant reload node*
+
 vagrant ssh node1
   sudo su -
   cd /vagrant

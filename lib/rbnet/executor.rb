@@ -4,11 +4,12 @@ require 'rbshark'
 
 module Rbnet
   class Executor
-    def initialize(frame, timestamp, recv_interface, interfaces)
+    def initialize(frame, timestamp, recv_interface, interfaces, default_gateway)
       @frame = frame
       @timestamp = timestamp
       @recv_interface = recv_interface
       @interfaces = interfaces
+      @default_gateway = default_gateway
     end
 
     def exec_ether
@@ -61,28 +62,31 @@ module Rbnet
       # ttlとcksumを更新したIPヘッダのframeを取得
       ip_header_tmp = calculate_cksum(ip_header, ttl)
 
+      # 送出するインターフェースを判別する
+      send_interface = nil
+      @interfaces.each do |interface|
+        next if interface == @recv_interface
+        # 宛先IPがインターフェースのsubnet内のIPアドレスか判定
+        if interface.in_addr[:subnet].include?(ip_header.ip_dst.to_s)
+          send_interface = interface
+        end
+      end
+      send_interface = @default_gateway.interface if send_interface.nil?
+
       # ARPテーブルに宛先IPアドレスのエントリがあるかチェック
       # ある場合: パケット送信処理
       # 無い場合: パケットを送信待ちデータに格納してARP Requestを送信
-      if $arp_table.entry.key?(ip_header.ip_dst.to_s.to_sym)
+      if $arp_table.entry.key?(ip_header.ip_dst.to_s.to_sym) || $arp_table.entry.key?(@default_gateway.ip_daddr)
         # ある場合
         hw_dhost = $arp_table.entry[ip_header.ip_dst.to_s.to_sym][:hw_addr].to_s
       else
         # 無い場合
-        # arp request発出
+        # send_interface != nilの時arp request発出
         return
       end
 
-      # 送出するインターフェースを判別する
-      send_interface = nil
-      @interfaces.each do |interface|
-        # 宛先IPがインターフェースのsubnet内のIPアドレスか判定
-        send_interface = interface if interface.in_addr[:subnet].include?(ip_header.ip_dst.to_s)
-      end
-
       # MACアドレスの書き換え
-      return if send_interface.nil?
-
+      # send_interface = nilの場合、デフォゲに発出するインターフェースからsource MACを取得
       hw_shost = send_interface.hw_addr
       ether_frame = remake_ether_header(ether_header, hw_shost, hw_dhost)
 
@@ -127,7 +131,7 @@ module Rbnet
       ip_header_tmp
     end
 
-    def remake_ether_header(ether_header, hw_shost, hw_dhost)
+    def remake_ether_header(ether_header, hw_dhost, hw_shost)
       ether_frame = @frame[ether_header.start_byte..ether_header.return_byte]
 
       hw_shost.to_s.split(':').each_with_index do |oct, index|
