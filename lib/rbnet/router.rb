@@ -13,13 +13,15 @@ module Rbnet
     def start
       $arp_table = Rbnet::ARPTable.new
       interfaces = []
+      default_gateway = nil
       (0..@interfaces_name.size - 1).each do |index|
         sock = Socket.open(Socket::AF_PACKET, Socket::SOCK_RAW, Rbnet::ETH_P_ALL)
         if_num = get_interface(sock, @interfaces_name[index])
         interfaces.push(Rbnet::Interface.new(sock, @interfaces_name[index]))
         sock.bind(sockaddr_ll(if_num))
+        default_gateway = Rbnet::DefaultGateway.new('192.168.30.3', interfaces.last) if @interfaces_name[index] == 'eth3'
       end
-      router(interfaces)
+      router(interfaces, default_gateway)
     end
 
     def get_interface(socket, interface)
@@ -46,7 +48,7 @@ module Rbnet
       end
     end
 
-    def router(interfaces)
+    def router(interfaces, default_gateway)
       # sock_ids = sockets.keys
 
       puts 'Router running...'
@@ -68,7 +70,7 @@ module Rbnet
 
           # To Do: Ethernetヘッダよりframeが大きいチェック
 
-          Rbnet::Executor.new(frame, timestamp, recv_interface, interfaces).exec_ether
+          Rbnet::Executor.new(frame, timestamp, recv_interface, interfaces, default_gateway).exec_ether
 
           if @options['print']
             # 出力用のpacketデータを生成

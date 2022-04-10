@@ -5,10 +5,11 @@ require 'ipaddr'
 module Rbnet
   # ネットワークインターフェースの情報を持つ構造体
   class Interface
-    attr_reader :sock, :hw_addr, :in_addr
+    attr_reader :sock, :name, :hw_addr, :in_addr
 
     def initialize(sock, if_name)
       @sock = sock
+      @name = if_name
       @in_addr = {
         ip_addr: nil,
         netmask: nil,
